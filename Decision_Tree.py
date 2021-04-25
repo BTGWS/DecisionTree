@@ -143,7 +143,7 @@ class DecisionTree_ID3:
 
     # 决策树预测
     def predict(self, data):
-        # 这个是干啥的？
+        # 目前没用
         # if isinstance(data, pd.Series):
         #     return self.predictBySeries(self.model, data)
         return data.apply(lambda d: self.predictBySeries(self.model, d), axis=1)
