@@ -21,15 +21,15 @@
                   ┗┻┛  ┗┻┛
 """
 import time
-
+import json
 import pandas as pd
-import sys
+
 
 from alive_progress import alive_bar
 
-from ReadFiles import read_file
+from IOFiles import read_file
 from Functions import data_split, floatDataSplit
-from Decision_Tree import DecisionTree_ID3
+from Decision_Tree import DecisionTree_ID3, DecisionTree_C45
 import pprint as pt
 
 """    
@@ -37,7 +37,7 @@ import pprint as pt
     print(list(dataset))            # 直接使用 list 关键字，返回一个list
     print(dataset.columns.tolist()) # df.columns 返回Index，可以通过 tolist(), 或者 list（array） 转换为list
 """
-start_head = '../My_Datasets/watermelon/'
+start_head = 'dataset/'
 sfile_name = ['watermelon2.csv', 'watermelon2_1.csv', 'watermelon3.csv', 'watermelon3_1.csv']
 
 if __name__ == '__main__':
@@ -65,30 +65,50 @@ if __name__ == '__main__':
     # ==================================================================
 
     dataset = dataset2
-    accelate_rate_list_id3 = []
-    accelate_rate_id3 = 0.0
+    accelerate_rate_list_id3 = []
+    accelerate_rate_list_c45 = []
+    accelerate_rate_id3 = 0.0
+    accelerate_rate_c45 = 0.0
     # print(dataset_columnsNames)
 
     lengthProgress = 10
+    train_ratio = 0.8
     with alive_bar(lengthProgress) as bar:
-        for i in range(lengthProgress):
-            train_data, test_data = data_split(dataset, 0.9)  # 划分数据集
-            # _, test_data = data_split(dataset[dataset_columnsNames], 0.8)  # 划分数据集
-            testDataLen = len(test_data)
+        train_data, _ = data_split(dataset, train_ratio)  # 划分数据集
 
+        for i in range(lengthProgress):
+            _, test_data = data_split(dataset, train_ratio)  # 划分数据集
+            testDataLen = len(test_data)
+            # print(test_data)
+
+            # ================ID3======================
             decisionTree_ID3 = DecisionTree_ID3()
-            treeData = decisionTree_ID3.fit(train_data)
+            treeData_ID3 = decisionTree_ID3.fit(train_data)  # treeData_ID3为训练好的id3模型
             # print(f"treeData: \n    {treeData}")
             # pt.pprint(treeData)
             # print(f"test_data:\n{test_data}")
             result_id3 = pd.DataFrame({'预测值': decisionTree_ID3.predict(test_data), '正取值': test_data.iloc[:, -1]})
             # print(result_id3)
-
-            accelate_rate_list_id3.append(len(result_id3.query('预测值==正取值')) / testDataLen)
+            accelerate_rate_list_id3.append(len(result_id3.query('预测值==正取值')) / testDataLen)
             # 累加成功率
-            accelate_rate_id3 += len(result_id3.query('预测值==正取值')) / testDataLen
+            accelerate_rate_id3 += len(result_id3.query('预测值==正取值')) / testDataLen
+
+            print(json.dumps(treeData_ID3, ensure_ascii=False))
+            # ================ID3======================
+
+            # ================C4.5======================
+            decisionTree_C45 = DecisionTree_C45()
+            treeData_C45 = decisionTree_C45.fit(train_data)
+            result_c45 = pd.DataFrame({'预测值': decisionTree_C45.predict(test_data), '正取值': test_data.iloc[:, -1]})
+            accelerate_rate_list_c45.append(len(result_c45.query('预测值==正取值')) / testDataLen)
+            # 累加成功率
+            accelerate_rate_c45 += len(result_c45.query('预测值==正取值')) / testDataLen
+
+            print(json.dumps(treeData_C45, ensure_ascii=False))
+            # ================C4.5======================
 
             bar()
             time.sleep(0.1)
 
-    print('使用ID3作为划分标准时平均准确率为:' + str((accelate_rate_id3 / lengthProgress) * 100) + "%")
+    print('使用ID3作为划分标准时平均准确率为:' + str((accelerate_rate_id3 / lengthProgress) * 100) + "%")
+    print('使用C4.5作为划分标准时平均准确率为:' + str((accelerate_rate_c45 / lengthProgress) * 100) + "%")
